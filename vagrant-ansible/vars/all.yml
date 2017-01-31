@@ -1,0 +1,27 @@
+---
+server:
+    install: '1'
+    extra_packages: [fail2ban, nodejs, npm]
+    timezone: America/New_York
+    locale: en_US.UTF-8
+vagrant_local:
+    install: '1'
+    vm: { base_box: trusty64, hostname: phalcon.dev, ip: 192.168.50.20, memory: '2048', sharedfolder: ./}
+apache:
+    install: '1'
+    docroot: /vagrant
+    serverport: 80
+    servername: phalcon.dev
+mysql:
+    install: '1'
+    root_password: root
+    database: phalcon
+    user: vagrant
+    password: vagrant
+php:
+    install: '1'
+    ppa: php
+xdebug:
+    install: '1'
+composer:
+    install: '1'

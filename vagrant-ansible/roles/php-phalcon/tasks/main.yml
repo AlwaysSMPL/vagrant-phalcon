@@ -1,0 +1,80 @@
+---
+- name: check phalcon version
+  shell: php -i | grep phalcon
+  register: current_phalcon_extension
+  ignore_errors: True
+
+- name: install php 5.6 dev tools and required build tools for phalcon
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - gcc
+    - make
+    - php5.6-dev
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+
+- name: checkout phalcon repository
+  git: repo=https://github.com/phalcon/cphalcon.git dest=/tmp/phalcon
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+- name: build phalcon
+  action: command {{ item }} chdir=/tmp/phalcon/build
+  with_items:
+    - ./install
+  become: yes
+  become_user: root
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+- name: copy phalcon.ini into etc php 5.6
+  copy: src=phalcon.ini dest=/etc/php/5.6/mods-available/phalcon.ini owner=root group=root mode=0644
+  become: yes
+  become_user: root
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+- name: copy phalcon.ini into etc php 5.6 (for cli)
+  copy: src=phalcon.ini dest=/etc/php/5.6/mods-available owner=root group=root mode=0644
+  become: yes
+  become_user: root
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+- name: create phalcon cli symlink
+  file: src=/etc/php/5.6/mods-available/phalcon.ini dest=/etc/php/5.6/cli/conf.d/20-phalcon.ini state=link
+  become: yes
+  become_user: root
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+- name: create phalcon apache2 symlink
+  file: src=/etc/php/5.6/mods-available/phalcon.ini dest=/etc/php/5.6/apache2/conf.d/20-phalcon.ini state=link
+  become: yes
+  become_user: root
+  when: "'enabled' not in '{{ current_phalcon_extension.stdout }}'"
+
+- name: need to restart apache2
+  debug: msg=restartapache2
+  notify: restart apache2
+
+- name: check phalcon dev tools
+  stat:
+    path: /usr/bin/phalcon
+  register: phalcon_dev_tools
+  ignore_errors: True
+
+- name: checkout phalcon dev tools repo
+  git:
+    repo: git://github.com/phalcon/phalcon-devtools.git
+    dest: ~/phalcon-devtools
+  when: phalcon_dev_tools.stat.exists == False
+  become: yes
+  become_user: vagrant
+
+- name: create phalcon devtools symlink
+  file: src=/home/vagrant/phalcon-devtools/phalcon.php dest=/usr/bin/phalcon state=link
+  when: phalcon_dev_tools.stat.exists == False
+  become: yes
+  become_user: root
+
+- name: perms for phalcon devtools
+  shell: chmod ugo+x /usr/bin/phalcon
+  when: phalcon_dev_tools.stat.exists == False
+  become: yes
+  become_user: root
